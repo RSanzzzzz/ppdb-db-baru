@@ -20,17 +20,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         require_once 'config/database.php';
         
-        // Check user credentials
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
+        // Check user credentials - using Indonesian column names from database
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE nama_pengguna = ? OR email = ?");
         $stmt->execute([$usernameOrEmail, $usernameOrEmail]);
         $user = $stmt->fetch();
         
-        if ($user && password_verify($password, $user['password'])) {
+        if ($user && password_verify($password, $user['kata_sandi'])) {
             // Login successful
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_email'] = $user['email'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['user_name'] = $user['name'];
+            $_SESSION['username'] = $user['nama_pengguna'];
+            $_SESSION['user_name'] = $user['nama'];
             
             // Redirect to dashboard
             header("Location: dashboard.php");
@@ -153,4 +153,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 </body>
 </html>
-

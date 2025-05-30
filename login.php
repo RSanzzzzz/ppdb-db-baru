@@ -20,25 +20,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         require_once 'config/database.php';
         
-        // Check user credentials - UPDATED FIELD NAMES
+        // Check user credentials - using Indonesian column names from database
         $stmt = $pdo->prepare("SELECT * FROM users WHERE nama_pengguna = ? OR email = ?");
         $stmt->execute([$usernameOrEmail, $usernameOrEmail]);
         $user = $stmt->fetch();
         
         if ($user && password_verify($password, $user['kata_sandi'])) {
-            // Login successful - UPDATED SESSION VARIABLES
+            // Login successful
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_email'] = $user['email'];
             $_SESSION['username'] = $user['nama_pengguna'];
             $_SESSION['user_name'] = $user['nama'];
-            $_SESSION['user_level'] = $user['level'] ?? 'user';
             
-            // Check if user is admin
-            if ($_SESSION['user_level'] === 'admin') {
-                header("Location: admin/dashboard.php");
-            } else {
-                header("Location: dashboard.php");
-            }
+            // Redirect to dashboard
+            header("Location: dashboard.php");
             exit();
         } else {
             $error = 'Username atau password salah';
@@ -123,7 +118,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   id="username" 
                   name="username" 
                   placeholder="Masukkan username / email terdaftar" 
-                  value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>"
                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   required
               >

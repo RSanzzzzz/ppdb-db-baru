@@ -31,8 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         require_once 'config/database.php';
         
-        // Check if username already exists
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+        // Check if username already exists - using Indonesian column names
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE nama_pengguna = ?");
         $stmt->execute([$username]);
         $userByUsername = $stmt->fetch();
 
@@ -49,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Hash password
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             
-            // Insert new user
-            $stmt = $pdo->prepare("INSERT INTO users (username, password, email, name) VALUES (?, ?, ?, ?)");
+            // Insert new user - using Indonesian column names
+            $stmt = $pdo->prepare("INSERT INTO users (nama_pengguna, kata_sandi, email, nama) VALUES (?, ?, ?, ?)");
             $result = $stmt->execute([$username, $hashed_password, $email, $name]);
             
             if ($result) {
@@ -213,4 +213,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 </body>
 </html>
-

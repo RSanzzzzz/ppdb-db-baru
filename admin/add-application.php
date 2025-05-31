@@ -9,8 +9,8 @@ if (!isset($_SESSION['admin_id'])) {
 
 require_once '../config/database.php';
 
-// Get users for dropdown
-$stmt = $pdo->query("SELECT id, username, name, email FROM users");
+// Get users for dropdown - Updated for new schema
+$stmt = $pdo->query("SELECT id, nama_pengguna, nama, email FROM users");
 $users = $stmt->fetchAll();
 
 // Initialize error and success messages
@@ -69,7 +69,7 @@ include 'includes/header.php';
                             <option value="">-- Tidak memilih user --</option>
                             <?php foreach ($users as $user): ?>
                             <option value="<?php echo $user['id']; ?>">
-                                <?php echo htmlspecialchars($user['name'] ? $user['name'] . ' (' . $user['username'] . ')' : $user['username']); ?> - <?php echo htmlspecialchars($user['email']); ?>
+                                <?php echo htmlspecialchars($user['nama'] ? $user['nama'] . ' (' . $user['nama_pengguna'] . ')' : $user['nama_pengguna']); ?> - <?php echo htmlspecialchars($user['email']); ?>
                             </option>
                             <?php endforeach; ?>
                         </select>

@@ -23,8 +23,8 @@ if (empty($registration_number)) {
     return;
 }
 
-// Validasi nomor pendaftaran unik (kecuali untuk pendaftaran yang sedang diedit)
-$checkRegStmt = $pdo->prepare("SELECT id FROM applicants WHERE registration_number = ? AND id != ?");
+// Validasi nomor pendaftaran unik (kecuali untuk pendaftaran yang sedang diedit) - Updated for new schema
+$checkRegStmt = $pdo->prepare("SELECT id FROM applicants WHERE nomor_pendaftaran = ? AND id != ?");
 $checkRegStmt->execute([$registration_number, $applicationId]);
 if ($checkRegStmt->rowCount() > 0) {
     $error = 'Nomor pendaftaran sudah digunakan. Silakan gunakan nomor lain.';
@@ -113,53 +113,61 @@ function handleFileUpload($fileKey, $uploadDir, $oldFilePath)
     return $oldFilePath; // Kembalikan path file lama jika upload gagal
 }
 
-// Upload files
-$certificateFile = handleFileUpload('certificate', $uploadDir, $application['certificate_file']);
-$birthCertificateFile = handleFileUpload('birthCertificate', $uploadDir, $application['birth_certificate_file']);
-$familyCardFile = handleFileUpload('familyCard', $uploadDir, $application['family_card_file']);
-$photoFile = handleFileUpload('photo', $uploadDir, $application['photo_file']);
-$elementaryCertificateFile = handleFileUpload('elementaryCertificate', $uploadDir, $application['elementary_certificate_file']);
-$mdaCertificateFile = handleFileUpload('mdaCertificate', $uploadDir, $application['mda_certificate_file']);
-$skhunFile = handleFileUpload('skhun', $uploadDir, $application['skhun_file']);
-$nisnFile = handleFileUpload('nisnFile', $uploadDir, $application['nisn_file']);
-$parentIdCardFile = handleFileUpload('parentIdCard', $uploadDir, $application['parent_id_card_file']);
-$socialCardFile = handleFileUpload('socialCard', $uploadDir, $application['social_card_file']);
-$graduationLetterFile = handleFileUpload('graduationLetter', $uploadDir, $application['graduation_letter_file']);
+// Upload files - Updated for new schema
+$certificateFile = handleFileUpload('certificate', $uploadDir, $application['file_ijazah']);
+$birthCertificateFile = handleFileUpload('birthCertificate', $uploadDir, $application['file_akta_kelahiran']);
+$familyCardFile = handleFileUpload('familyCard', $uploadDir, $application['file_kartu_keluarga']);
+$photoFile = handleFileUpload('photo', $uploadDir, $application['file_foto']);
+$elementaryCertificateFile = handleFileUpload('elementaryCertificate', $uploadDir, $application['file_ijazah_sd']);
+$mdaCertificateFile = handleFileUpload('mdaCertificate', $uploadDir, $application['file_ijazah_mda']);
+$skhunFile = handleFileUpload('skhun', $uploadDir, $application['file_skhun']);
+$nisnFile = handleFileUpload('nisnFile', $uploadDir, $application['file_nisn']);
+$parentIdCardFile = handleFileUpload('parentIdCard', $uploadDir, $application['file_ktp_orangtua']);
+$socialCardFile = handleFileUpload('socialCard', $uploadDir, $application['file_kartu_sosial']);
+$graduationLetterFile = handleFileUpload('graduationLetter', $uploadDir, $application['file_surat_lulus']);
 
-// Update data pendaftaran
+// Map gender value from English to Indonesian if needed
+$genderValue = $_POST['gender'];
+if ($genderValue === 'male') {
+    $genderValue = 'laki-laki';
+} else if ($genderValue === 'female') {
+    $genderValue = 'perempuan';
+}
+
+// Update data pendaftaran - Updated for new schema
 $stmt = $pdo->prepare("UPDATE applicants SET 
    user_id = ?, 
-   registration_number = ?, 
-   full_name = ?, 
+   nomor_pendaftaran = ?, 
+   nama_lengkap = ?, 
    nisn = ?, 
-   birth_place = ?, 
-   birth_date = ?, 
-   gender = ?, 
-   religion = ?, 
-   address = ?, 
-   phone = ?, 
+   tempat_lahir = ?, 
+   tanggal_lahir = ?, 
+   jenis_kelamin = ?, 
+   agama = ?, 
+   alamat = ?, 
+   telepon = ?, 
    email = ?, 
-   father_name = ?, 
-   father_job = ?, 
-   mother_name = ?, 
-   mother_job = ?, 
-   parent_phone = ?, 
-   school_name = ?, 
-   school_address = ?, 
-   graduation_year = ?, 
-   certificate_file = ?, 
-   birth_certificate_file = ?, 
-   family_card_file = ?, 
-   photo_file = ?,
-   elementary_certificate_file = ?, 
-   mda_certificate_file = ?, 
-   skhun_file = ?, 
-   nisn_file = ?,
-   parent_id_card_file = ?, 
-   social_card_file = ?, 
-   graduation_letter_file = ?,
+   nama_ayah = ?, 
+   pekerjaan_ayah = ?, 
+   nama_ibu = ?, 
+   pekerjaan_ibu = ?, 
+   telepon_orangtua = ?, 
+   nama_sekolah = ?, 
+   alamat_sekolah = ?, 
+   tahun_lulus = ?, 
+   file_ijazah = ?, 
+   file_akta_kelahiran = ?, 
+   file_kartu_keluarga = ?, 
+   file_foto = ?,
+   file_ijazah_sd = ?, 
+   file_ijazah_mda = ?, 
+   file_skhun = ?, 
+   file_nisn = ?,
+   file_ktp_orangtua = ?, 
+   file_kartu_sosial = ?, 
+   file_surat_lulus = ?,
    status = ?,
-   admin_notes = ?
+   catatan_admin = ?
 WHERE id = ?");
 
 $result = $stmt->execute([
@@ -169,7 +177,7 @@ $result = $stmt->execute([
     $_POST['nisn'],
     $_POST['birthPlace'],
     $_POST['birthDate'],
-    $_POST['gender'],
+    $genderValue,
     $_POST['religion'],
     $_POST['address'],
     $_POST['phone'],
@@ -199,14 +207,34 @@ $result = $stmt->execute([
 ]);
 
 if ($result) {
-    // Kirim email notifikasi jika status berubah
+    // Kirim email notifikasi jika status berubah - Updated for new schema
     $statusChanged = $application['status'] !== $status;
-    $notesChanged = $application['admin_notes'] !== $admin_notes;
+    $notesChanged = $application['catatan_admin'] !== $admin_notes;
 
     if (($statusChanged || $notesChanged) && !empty($_POST['email'])) {
-        require_once '../includes/email-helper.php';
+        require_once '../includes/emailHelper.php';
 
         $subject = "Update Status Pendaftaran PPDB - " . $registration_number;
+        
+        // Map status to display text for email
+        $statusDisplayText = '';
+        switch ($status) {
+            case 'menunggu':
+                $statusDisplayText = 'Menunggu Verifikasi';
+                break;
+            case 'terverifikasi':
+                $statusDisplayText = 'Terverifikasi';
+                break;
+            case 'diterima':
+                $statusDisplayText = 'Diterima';
+                break;
+            case 'ditolak':
+                $statusDisplayText = 'Ditolak';
+                break;
+            default:
+                $statusDisplayText = $status; // Use as-is if not mapped
+        }
+        
         $emailContent = getStatusUpdateEmailTemplate($_POST['fullName'], $registration_number, $status, $admin_notes);
 
         // Send email
@@ -221,7 +249,7 @@ if ($result) {
 
         $logMessage = date('Y-m-d H:i:s') . " - Email ke {$_POST['email']}: " .
             ($emailSent ? "BERHASIL" : "GAGAL") .
-            ", Status: $status, ID: $applicationId\n";
+            ", Status: $statusDisplayText, ID: $applicationId\n";
         file_put_contents($logFile, $logMessage, FILE_APPEND);
 
         if ($emailSent) {
@@ -233,7 +261,7 @@ if ($result) {
         $success = 'Data pendaftaran berhasil diperbarui.';
     }
 
-    // Log perubahan
+    // Log perubahan - Updated for new schema
     $logFile = __DIR__ . '/../logs/admin_actions.log';
     $logDir = dirname($logFile);
     if (!file_exists($logDir)) {

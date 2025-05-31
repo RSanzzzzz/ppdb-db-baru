@@ -47,8 +47,8 @@ if (isset($_GET['error'])) {
 $status = isset($_GET['status']) ? $_GET['status'] : '';
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 
-// Build query based on filters
-$query = "SELECT a.*, u.username, u.name as user_name FROM applicants a 
+// Build query based on filters - Updated for new schema
+$query = "SELECT a.*, u.nama_pengguna, u.nama as user_name FROM applicants a 
          JOIN users u ON a.user_id = u.id 
          WHERE 1=1";
 
@@ -60,34 +60,34 @@ if (!empty($status)) {
 }
 
 if (!empty($search)) {
-    $query .= " AND (a.full_name LIKE ? OR a.registration_number LIKE ? OR a.nisn LIKE ?)";
+    $query .= " AND (a.nama_lengkap LIKE ? OR a.nomor_pendaftaran LIKE ? OR a.nisn LIKE ?)";
     $searchParam = "%$search%";
     $params[] = $searchParam;
     $params[] = $searchParam;
     $params[] = $searchParam;
 }
 
-$query .= " ORDER BY a.created_at DESC";
+$query .= " ORDER BY a.tanggal_dibuat DESC";
 
 // Execute query
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $applications = $stmt->fetchAll();
 
-// Get counts for dashboard
+// Get counts for dashboard - Updated status values
 $stmtTotal = $pdo->query("SELECT COUNT(*) FROM applicants");
 $totalApplications = $stmtTotal->fetchColumn();
 
-$stmtPending = $pdo->query("SELECT COUNT(*) FROM applicants WHERE status = 'pending'");
+$stmtPending = $pdo->query("SELECT COUNT(*) FROM applicants WHERE status = 'menunggu'");
 $pendingApplications = $stmtPending->fetchColumn();
 
-$stmtVerified = $pdo->query("SELECT COUNT(*) FROM applicants WHERE status = 'verified'");
+$stmtVerified = $pdo->query("SELECT COUNT(*) FROM applicants WHERE status = 'terverifikasi'");
 $verifiedApplications = $stmtVerified->fetchColumn();
 
-$stmtAccepted = $pdo->query("SELECT COUNT(*) FROM applicants WHERE status = 'accepted'");
+$stmtAccepted = $pdo->query("SELECT COUNT(*) FROM applicants WHERE status = 'diterima'");
 $acceptedApplications = $stmtAccepted->fetchColumn();
 
-$stmtRejected = $pdo->query("SELECT COUNT(*) FROM applicants WHERE status = 'rejected'");
+$stmtRejected = $pdo->query("SELECT COUNT(*) FROM applicants WHERE status = 'ditolak'");
 $rejectedApplications = $stmtRejected->fetchColumn();
 
 function tanggal_indo($tanggal) {
@@ -102,6 +102,38 @@ function tanggal_indo($tanggal) {
     $y = date('Y', strtotime($tanggal));
     
     return $d . ' ' . $m . ' ' . $y;
+}
+
+// Function to map database status to display text
+function getStatusText($status) {
+    switch ($status) {
+        case 'menunggu':
+            return 'Menunggu Verifikasi';
+        case 'terverifikasi':
+            return 'Terverifikasi';
+        case 'diterima':
+            return 'Diterima';
+        case 'ditolak':
+            return 'Ditolak';
+        default:
+            return 'Tidak Diketahui';
+    }
+}
+
+// Function to get status CSS class
+function getStatusClass($status) {
+    switch ($status) {
+        case 'menunggu':
+            return 'status-pending';
+        case 'terverifikasi':
+            return 'status-verified';
+        case 'diterima':
+            return 'status-accepted';
+        case 'ditolak':
+            return 'status-rejected';
+        default:
+            return 'status-pending';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -218,7 +250,7 @@ function tanggal_indo($tanggal) {
             <h1 class="text-xl font-bold text-dark">PPDB Online - Admin Panel</h1>
             <div class="flex items-center gap-4">
                 <span class="hidden text-sm font-medium md:inline-block text-dark">
-                    Admin: <?php echo htmlspecialchars($_SESSION['admin_name'] ?? $_SESSION['username']); ?>
+                    Admin: <?php echo htmlspecialchars($_SESSION['admin_name'] ?? $_SESSION['admin_username']); ?>
                 </span>
                 <a href="?logout=1" class="text-dark hover:text-dark-hover hover-transition" title="Logout">
                     <i class="fas fa-sign-out-alt"></i>
@@ -285,16 +317,16 @@ function tanggal_indo($tanggal) {
                 <a href="dashboard.php" class="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-dark shadow-sm hover:bg-light hover-transition <?php echo empty($status) ? 'bg-light' : ''; ?>">
                     Semua
                 </a>
-                <a href="?status=pending" class="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-dark shadow-sm hover:bg-light hover-transition <?php echo $status === 'pending' ? 'bg-light' : ''; ?>">
+                <a href="?status=menunggu" class="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-dark shadow-sm hover:bg-light hover-transition <?php echo $status === 'menunggu' ? 'bg-light' : ''; ?>">
                     Menunggu Verifikasi
                 </a>
-                <a href="?status=verified" class="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-dark shadow-sm hover:bg-light hover-transition <?php echo $status === 'verified' ? 'bg-light' : ''; ?>">
+                <a href="?status=terverifikasi" class="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-dark shadow-sm hover:bg-light hover-transition <?php echo $status === 'terverifikasi' ? 'bg-light' : ''; ?>">
                     Terverifikasi
                 </a>
-                <a href="?status=accepted" class="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-dark shadow-sm hover:bg-light hover-transition <?php echo $status === 'accepted' ? 'bg-light' : ''; ?>">
+                <a href="?status=diterima" class="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-dark shadow-sm hover:bg-light hover-transition <?php echo $status === 'diterima' ? 'bg-light' : ''; ?>">
                     Diterima
                 </a>
-                <a href="?status=rejected" class="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-dark shadow-sm hover:bg-light hover-transition <?php echo $status === 'rejected' ? 'bg-light' : ''; ?>">
+                <a href="?status=ditolak" class="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-dark shadow-sm hover:bg-light hover-transition <?php echo $status === 'ditolak' ? 'bg-light' : ''; ?>">
                     Ditolak
                 </a>
             </div>
@@ -336,28 +368,14 @@ function tanggal_indo($tanggal) {
                         <?php if (count($applications) > 0): ?>
                             <?php foreach ($applications as $app): ?>
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-sm"><?php echo htmlspecialchars($app['registration_number']); ?></td>
-                                    <td class="px-4 py-3 text-sm"><?php echo htmlspecialchars($app['full_name']); ?></td>
+                                    <td class="px-4 py-3 text-sm"><?php echo htmlspecialchars($app['nomor_pendaftaran']); ?></td>
+                                    <td class="px-4 py-3 text-sm"><?php echo htmlspecialchars($app['nama_lengkap']); ?></td>
                                     <td class="px-4 py-3 text-sm"><?php echo htmlspecialchars($app['nisn']); ?></td>
-                                    <td class="px-4 py-3 text-sm"><?php echo tanggal_indo($app['created_at']); ?></td>
+                                    <td class="px-4 py-3 text-sm"><?php echo tanggal_indo($app['tanggal_dibuat']); ?></td>
                                     <td class="px-4 py-3 text-sm">
                                         <?php
-                                        $statusClass = 'status-' . $app['status'];
-                                        $statusText = '';
-                                        switch ($app['status']) {
-                                            case 'pending':
-                                                $statusText = 'Menunggu Verifikasi';
-                                                break;
-                                            case 'verified':
-                                                $statusText = 'Terverifikasi';
-                                                break;
-                                            case 'accepted':
-                                                $statusText = 'Diterima';
-                                                break;
-                                            case 'rejected':
-                                                $statusText = 'Ditolak';
-                                                break;
-                                        }
+                                        $statusClass = getStatusClass($app['status']);
+                                        $statusText = getStatusText($app['status']);
                                         ?>
                                         <span class="<?php echo $statusClass; ?> rounded-full px-2 py-1 text-xs font-medium">
                                             <?php echo $statusText; ?>
@@ -371,16 +389,16 @@ function tanggal_indo($tanggal) {
                                             <a href="edit-application.php?id=<?php echo $app['id']; ?>" class="text-blue-600 hover:text-blue-800 ml-2" title="Edit Data">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <?php if ($app['status'] === 'pending'): ?>
-                                                <a href="update-status.php?id=<?php echo $app['id']; ?>&status=verified" class="text-blue-600 hover:text-blue-800" title="Verifikasi">
+                                            <?php if ($app['status'] === 'menunggu'): ?>
+                                                <a href="update-status.php?id=<?php echo $app['id']; ?>&status=terverifikasi" class="text-blue-600 hover:text-blue-800" title="Verifikasi">
                                                     <i class="fas fa-check"></i>
                                                 </a>
                                             <?php endif; ?>
-                                            <?php if ($app['status'] === 'verified'): ?>
-                                                <a href="update-status.php?id=<?php echo $app['id']; ?>&status=accepted" class="text-green-600 hover:text-green-800" title="Terima">
+                                            <?php if ($app['status'] === 'terverifikasi'): ?>
+                                                <a href="update-status.php?id=<?php echo $app['id']; ?>&status=diterima" class="text-green-600 hover:text-green-800" title="Terima">
                                                     <i class="fas fa-check-circle"></i>
                                                 </a>
-                                                <a href="update-status.php?id=<?php echo $app['id']; ?>&status=rejected" class="text-red-600 hover:text-red-800" title="Tolak">
+                                                <a href="update-status.php?id=<?php echo $app['id']; ?>&status=ditolak" class="text-red-600 hover:text-red-800" title="Tolak">
                                                     <i class="fas fa-times-circle"></i>
                                                 </a>
                                             <?php endif; ?>
@@ -390,8 +408,8 @@ function tanggal_indo($tanggal) {
                                                 class="delete-btn text-red-600 hover:text-red-800 ml-2"
                                                 title="Hapus Data"
                                                 data-id="<?php echo $app['id']; ?>"
-                                                data-name="<?php echo htmlspecialchars($app['full_name']); ?>"
-                                                data-reg="<?php echo htmlspecialchars($app['registration_number']); ?>"
+                                                data-name="<?php echo htmlspecialchars($app['nama_lengkap']); ?>"
+                                                data-reg="<?php echo htmlspecialchars($app['nomor_pendaftaran']); ?>"
                                                 data-status="<?php echo $statusText; ?>">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>

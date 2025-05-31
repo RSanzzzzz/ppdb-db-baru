@@ -18,7 +18,7 @@ $confirm = isset($_GET['confirm']) ? $_GET['confirm'] : '';
 
 require_once '../config/database.php';
 
-// Get application details for confirmation
+// Get application details for confirmation - Updated for new schema
 $stmt = $pdo->prepare("SELECT a.*, u.id as user_id FROM applicants a 
                       LEFT JOIN users u ON a.user_id = u.id 
                       WHERE a.id = ?");
@@ -47,7 +47,7 @@ if ($confirm === 'yes') {
             mkdir($logDir, 0777, true);
         }
 
-        $logMessage = date('Y-m-d H:i:s') . " - Admin ID: {$_SESSION['admin_id']} menghapus pendaftaran ID: {$applicationId}, Nomor: {$application['registration_number']}\n";
+        $logMessage = date('Y-m-d H:i:s') . " - Admin ID: {$_SESSION['admin_id']} menghapus pendaftaran ID: {$applicationId}, Nomor: {$application['nomor_pendaftaran']}\n";
         file_put_contents($logFile, $logMessage, FILE_APPEND);
 
         // Commit transaction

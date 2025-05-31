@@ -17,8 +17,8 @@ if (empty($registration_number)) {
     return;
 }
 
-// Validasi nomor pendaftaran unik
-$checkRegStmt = $pdo->prepare("SELECT id FROM applicants WHERE registration_number = ?");
+// Validasi nomor pendaftaran unik - Updated for new schema
+$checkRegStmt = $pdo->prepare("SELECT id FROM applicants WHERE nomor_pendaftaran = ?");
 $checkRegStmt->execute([$registration_number]);
 if ($checkRegStmt->rowCount() > 0) {
     $error = 'Nomor pendaftaran sudah digunakan. Silakan gunakan nomor lain.';
@@ -37,8 +37,8 @@ if (empty($user_id)) {
     $username = $baseUsername;
     $counter = 1;
 
-    // Cek apakah username sudah ada
-    $checkUsernameStmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+    // Cek apakah username sudah ada - Updated for new schema
+    $checkUsernameStmt = $pdo->prepare("SELECT id FROM users WHERE nama_pengguna = ?");
     $checkUsernameStmt->execute([$username]);
 
     // Jika username sudah ada, tambahkan angka di belakangnya
@@ -60,8 +60,8 @@ if (empty($user_id)) {
         $email = $username . '_' . time() . '@example.com';
     }
 
-    // Buat user baru
-    $insertUserStmt = $pdo->prepare("INSERT INTO users (username, password, email, name) VALUES (?, ?, ?, ?)");
+    // Buat user baru - Updated for new schema
+    $insertUserStmt = $pdo->prepare("INSERT INTO users (nama_pengguna, kata_sandi, email, nama) VALUES (?, ?, ?, ?)");
     $insertUserResult = $insertUserStmt->execute([$username, $hashedPassword, $email, $fullName]);
 
     if ($insertUserResult) {
@@ -74,7 +74,7 @@ if (empty($user_id)) {
         return;
     }
 } else {
-    // Validasi apakah user sudah memiliki pendaftaran
+    // Validasi apakah user sudah memiliki pendaftaran - Updated for new schema
     $checkStmt = $pdo->prepare("SELECT id FROM applicants WHERE user_id = ?");
     $checkStmt->execute([$user_id]);
     if ($checkStmt->rowCount() > 0) {
@@ -82,7 +82,7 @@ if (empty($user_id)) {
         return;
     }
 
-    // Get user email if not provided
+    // Get user email if not provided - Updated for new schema
     if (empty($_POST['email'])) {
         $userStmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
         $userStmt->execute([$user_id]);
@@ -182,15 +182,23 @@ $parentIdCardFile = handleFileUpload('parentIdCard', $uploadDir);
 $socialCardFile = handleFileUpload('socialCard', $uploadDir);
 $graduationLetterFile = handleFileUpload('graduationLetter', $uploadDir);
 
-// Modifikasi bagian insert data untuk menghapus admin_notes
+// Map gender value from English to Indonesian
+$genderValue = '';
+if ($_POST['gender'] === 'male') {
+    $genderValue = 'laki-laki';
+} else if ($_POST['gender'] === 'female') {
+    $genderValue = 'perempuan';
+}
+
+// Modifikasi bagian insert data - Updated for new schema
 $stmt = $pdo->prepare("INSERT INTO applicants (
-    user_id, registration_number, full_name, nisn, birth_place, birth_date, 
-    gender, religion, address, phone, email, father_name, father_job, 
-    mother_name, mother_job, parent_phone, school_name, school_address, 
-    graduation_year, certificate_file, birth_certificate_file, family_card_file, photo_file,
-    elementary_certificate_file, mda_certificate_file, skhun_file, nisn_file,
-    parent_id_card_file, social_card_file, graduation_letter_file, status
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted')");
+    user_id, nomor_pendaftaran, nama_lengkap, nisn, tempat_lahir, tanggal_lahir, 
+    jenis_kelamin, agama, alamat, telepon, email, nama_ayah, pekerjaan_ayah, 
+    nama_ibu, pekerjaan_ibu, telepon_orangtua, nama_sekolah, alamat_sekolah, 
+    tahun_lulus, file_ijazah, file_akta_kelahiran, file_kartu_keluarga, file_foto,
+    file_ijazah_sd, file_ijazah_mda, file_skhun, file_nisn,
+    file_ktp_orangtua, file_kartu_sosial, file_surat_lulus, status
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'diterima')");
 
 $result = $stmt->execute([
     $user_id,
@@ -199,7 +207,7 @@ $result = $stmt->execute([
     $_POST['nisn'],
     $_POST['birthPlace'],
     $_POST['birthDate'],
-    $_POST['gender'],
+    $genderValue,
     $_POST['religion'],
     $_POST['address'],
     $_POST['phone'],
@@ -232,7 +240,7 @@ if ($result) {
         require_once '../includes/emailHelper.php';
 
         $subject = "Pendaftaran PPDB Anda Telah Diterima - " . $registration_number;
-        $emailContent = getStatusUpdateEmailTemplate($_POST['fullName'], $registration_number, 'accepted', '');
+        $emailContent = getStatusUpdateEmailTemplate($_POST['fullName'], $registration_number, 'Diterima', '');
 
         // Send email
         $emailSent = sendEmail($_POST['email'], $subject, $emailContent);
@@ -262,7 +270,7 @@ if ($result) {
 
         $logMessage = date('Y-m-d H:i:s') . " - Email ke {$_POST['email']}: " .
             ($emailSent ? "BERHASIL" : "GAGAL") .
-            ", Status: accepted, Nomor: $registration_number\n";
+            ", Status: diterima, Nomor: $registration_number\n";
         file_put_contents($logFile, $logMessage, FILE_APPEND);
     }
 } else {

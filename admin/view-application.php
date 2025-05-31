@@ -17,8 +17,8 @@ $applicationId = $_GET['id'];
 
 require_once '../config/database.php';
 
-// Get application details
-$stmt = $pdo->prepare("SELECT a.*, u.email, u.name as user_name FROM applicants a 
+// Get application details - Updated for new schema
+$stmt = $pdo->prepare("SELECT a.*, u.email, u.nama as user_name FROM applicants a 
                       LEFT JOIN users u ON a.user_id = u.id 
                       WHERE a.id = ?");
 $stmt->execute([$applicationId]);
@@ -29,12 +29,12 @@ if (!$application) {
     exit();
 }
 
-// Status options for dropdown
+// Status options for dropdown - Updated for new schema
 $statusOptions = [
-    'pending' => 'Menunggu Verifikasi',
-    'verified' => 'Terverifikasi',
-    'accepted' => 'Diterima',
-    'rejected' => 'Ditolak'
+    'menunggu' => 'Menunggu Verifikasi',
+    'terverifikasi' => 'Terverifikasi',
+    'diterima' => 'Diterima',
+    'ditolak' => 'Ditolak'
 ];
 
 // Check if status was updated
@@ -54,6 +54,11 @@ if ($emailLogExists) {
     $emailLogs = file_get_contents($emailLogFile);
     $emailLogs = array_slice(explode("\n", $emailLogs), -10); // Get last 10 lines
     $emailLogs = implode("\n", $emailLogs);
+}
+
+// Function to map gender value
+function mapGender($gender) {
+    return $gender === 'laki-laki' ? 'Laki-laki' : 'Perempuan';
 }
 ?>
 <!DOCTYPE html>
@@ -103,7 +108,7 @@ if ($emailLogExists) {
         <div class="mb-6 flex items-center justify-between">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800">Detail Pendaftaran</h2>
-                <p class="text-gray-600">Nomor Pendaftaran: <?php echo htmlspecialchars($application['registration_number']); ?></p>
+                <p class="text-gray-600">Nomor Pendaftaran: <?php echo htmlspecialchars($application['nomor_pendaftaran']); ?></p>
             </div>
             <a href="dashboard.php" class="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300">
                 <i class="fas fa-arrow-left mr-2"></i> Kembali
@@ -140,7 +145,7 @@ if ($emailLogExists) {
                     
                     <div>
                         <label for="admin_notes" class="mb-1 block text-sm font-medium text-gray-700">Catatan Admin</label>
-                        <textarea id="admin_notes" name="admin_notes" rows="3" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><?php echo htmlspecialchars($application['admin_notes'] ?? ''); ?></textarea>
+                        <textarea id="admin_notes" name="admin_notes" rows="3" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><?php echo htmlspecialchars($application['catatan_admin'] ?? ''); ?></textarea>
                         <p class="mt-1 text-xs text-red-500">* Catatan ini akan ditampilkan kepada peserta dan dikirim melalui email.</p>
                     </div>
                 </div>
@@ -163,7 +168,7 @@ if ($emailLogExists) {
                     <table class="w-full text-sm">
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Nama Lengkap</td>
-                            <td><?php echo htmlspecialchars($application['full_name']); ?></td>
+                            <td><?php echo htmlspecialchars($application['nama_lengkap']); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Email</td>
@@ -175,23 +180,23 @@ if ($emailLogExists) {
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Tempat, Tanggal Lahir</td>
-                            <td><?php echo htmlspecialchars($application['birth_place']) . ', ' . date('d F Y', strtotime($application['birth_date'])); ?></td>
+                            <td><?php echo htmlspecialchars($application['tempat_lahir']) . ', ' . date('d F Y', strtotime($application['tanggal_lahir'])); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Jenis Kelamin</td>
-                            <td><?php echo $application['gender'] === 'male' ? 'Laki-laki' : 'Perempuan'; ?></td>
+                            <td><?php echo mapGender($application['jenis_kelamin']); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Agama</td>
-                            <td><?php echo htmlspecialchars(ucfirst($application['religion'])); ?></td>
+                            <td><?php echo htmlspecialchars(ucfirst($application['agama'])); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Alamat</td>
-                            <td><?php echo htmlspecialchars($application['address']); ?></td>
+                            <td><?php echo htmlspecialchars($application['alamat']); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Telepon</td>
-                            <td><?php echo htmlspecialchars($application['phone']); ?></td>
+                            <td><?php echo htmlspecialchars($application['telepon']); ?></td>
                         </tr>
                     </table>
                 </div>
@@ -201,23 +206,23 @@ if ($emailLogExists) {
                     <table class="w-full text-sm">
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Nama Ayah</td>
-                            <td><?php echo htmlspecialchars($application['father_name']); ?></td>
+                            <td><?php echo htmlspecialchars($application['nama_ayah']); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Pekerjaan Ayah</td>
-                            <td><?php echo htmlspecialchars($application['father_job']); ?></td>
+                            <td><?php echo htmlspecialchars($application['pekerjaan_ayah']); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Nama Ibu</td>
-                            <td><?php echo htmlspecialchars($application['mother_name']); ?></td>
+                            <td><?php echo htmlspecialchars($application['nama_ibu']); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Pekerjaan Ibu</td>
-                            <td><?php echo htmlspecialchars($application['mother_job']); ?></td>
+                            <td><?php echo htmlspecialchars($application['pekerjaan_ibu']); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Telepon Orang Tua</td>
-                            <td><?php echo htmlspecialchars($application['parent_phone']); ?></td>
+                            <td><?php echo htmlspecialchars($application['telepon_orangtua']); ?></td>
                         </tr>
                     </table>
                     
@@ -225,15 +230,15 @@ if ($emailLogExists) {
                     <table class="w-full text-sm">
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Nama Sekolah</td>
-                            <td><?php echo htmlspecialchars($application['school_name']); ?></td>
+                            <td><?php echo htmlspecialchars($application['nama_sekolah']); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Alamat Sekolah</td>
-                            <td><?php echo htmlspecialchars($application['school_address']); ?></td>
+                            <td><?php echo htmlspecialchars($application['alamat_sekolah']); ?></td>
                         </tr>
                         <tr>
                             <td class="py-1 pr-4 font-medium text-gray-600">Tahun Lulus</td>
-                            <td><?php echo htmlspecialchars($application['graduation_year']); ?></td>
+                            <td><?php echo htmlspecialchars($application['tahun_lulus']); ?></td>
                         </tr>
                     </table>
                 </div>
@@ -242,18 +247,19 @@ if ($emailLogExists) {
             <h4 class="mb-2 font-medium text-gray-700">Dokumen</h4>
             <div class="grid gap-4 md:grid-cols-3">
                 <?php
+                // Updated for new schema
                 $documents = [
-                    'Ijazah/Surat Keterangan Lulus' => $application['certificate_file'],
-                    'Akta Kelahiran' => $application['birth_certificate_file'],
-                    'Kartu Keluarga' => $application['family_card_file'],
-                    'Pas Foto' => $application['photo_file'],
-                    'Ijazah SD/MI' => $application['elementary_certificate_file'],
-                    'Ijazah MDA' => $application['mda_certificate_file'],
-                    'SKHUN' => $application['skhun_file'],
-                    'NISN' => $application['nisn_file'],
-                    'KTP Wali' => $application['parent_id_card_file'],
-                    'Kartu KIS/KIP/PKH' => $application['social_card_file'],
-                    'Surat Keterangan Lulus' => $application['graduation_letter_file']
+                    'Ijazah/Surat Keterangan Lulus' => $application['file_ijazah'],
+                    'Akta Kelahiran' => $application['file_akta_kelahiran'],
+                    'Kartu Keluarga' => $application['file_kartu_keluarga'],
+                    'Pas Foto' => $application['file_foto'],
+                    'Ijazah SD/MI' => $application['file_ijazah_sd'],
+                    'Ijazah MDA' => $application['file_ijazah_mda'],
+                    'SKHUN' => $application['file_skhun'],
+                    'NISN' => $application['file_nisn'],
+                    'KTP Wali' => $application['file_ktp_orangtua'],
+                    'Kartu KIS/KIP/PKH' => $application['file_kartu_sosial'],
+                    'Surat Keterangan Lulus' => $application['file_surat_lulus']
                 ];
                 
                 foreach ($documents as $label => $file):

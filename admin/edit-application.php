@@ -17,8 +17,8 @@ $applicationId = $_GET['id'];
 
 require_once '../config/database.php';
 
-// Get application data
-$stmt = $pdo->prepare("SELECT a.*, u.id as user_id, u.username, u.name as user_name, u.email as user_email 
+// Get application data - Updated for new schema
+$stmt = $pdo->prepare("SELECT a.*, u.id as user_id, u.nama_pengguna, u.nama as user_name, u.email as user_email 
                       FROM applicants a 
                       LEFT JOIN users u ON a.user_id = u.id 
                       WHERE a.id = ?");
@@ -30,8 +30,8 @@ if (!$application) {
     exit();
 }
 
-// Get users for dropdown
-$stmt = $pdo->query("SELECT id, username, name, email FROM users");
+// Get users for dropdown - Updated for new schema
+$stmt = $pdo->query("SELECT id, nama_pengguna, nama, email FROM users");
 $users = $stmt->fetchAll();
 
 // Initialize error and success messages
@@ -46,6 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form'])) {
 
 $pageTitle = "Edit Pendaftaran - Admin PPDB";
 include 'includes/header.php';
+
+// Function to map gender from Indonesian to English for form display
+function mapGenderToEnglish($gender) {
+    if ($gender === 'laki-laki') return 'male';
+    if ($gender === 'perempuan') return 'female';
+    return $gender;
+}
 ?>
 
 <main class="container mx-auto px-4 py-8">
@@ -88,11 +95,11 @@ include 'includes/header.php';
                             <option value="">-- Tidak memilih user --</option>
                             <?php foreach ($users as $user): ?>
                                 <option value="<?php echo $user['id']; ?>" <?php echo ($user['id'] == $application['user_id']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($user['name'] ? $user['name'] . ' (' . $user['username'] . ')' : $user['username']); ?> - <?php echo htmlspecialchars($user['email']); ?>
+                                    <?php echo htmlspecialchars($user['nama'] ? $user['nama'] . ' (' . $user['nama_pengguna'] . ')' : $user['nama_pengguna']); ?> - <?php echo htmlspecialchars($user['email']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <p class="text-xs text-gray-500">User saat ini: <?php echo htmlspecialchars($application['user_name'] ?? $application['username'] ?? 'Tidak ada'); ?></p>
+                        <p class="text-xs text-gray-500">User saat ini: <?php echo htmlspecialchars($application['user_name'] ?? $application['nama_pengguna'] ?? 'Tidak ada'); ?></p>
                     </div>
 
                     <div class="space-y-2">
@@ -104,7 +111,7 @@ include 'includes/header.php';
                             id="registration_number"
                             name="registration_number"
                             placeholder="Masukkan nomor pendaftaran"
-                            value="<?php echo htmlspecialchars($application['registration_number']); ?>"
+                            value="<?php echo htmlspecialchars($application['nomor_pendaftaran']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -124,10 +131,10 @@ include 'includes/header.php';
                             name="status"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
-                            <option value="pending" <?php echo ($application['status'] == 'pending') ? 'selected' : ''; ?>>Menunggu Verifikasi</option>
-                            <option value="verified" <?php echo ($application['status'] == 'verified') ? 'selected' : ''; ?>>Terverifikasi</option>
-                            <option value="accepted" <?php echo ($application['status'] == 'accepted') ? 'selected' : ''; ?>>Diterima</option>
-                            <option value="rejected" <?php echo ($application['status'] == 'rejected') ? 'selected' : ''; ?>>Ditolak</option>
+                            <option value="menunggu" <?php echo ($application['status'] == 'menunggu') ? 'selected' : ''; ?>>Menunggu Verifikasi</option>
+                            <option value="terverifikasi" <?php echo ($application['status'] == 'terverifikasi') ? 'selected' : ''; ?>>Terverifikasi</option>
+                            <option value="diterima" <?php echo ($application['status'] == 'diterima') ? 'selected' : ''; ?>>Diterima</option>
+                            <option value="ditolak" <?php echo ($application['status'] == 'ditolak') ? 'selected' : ''; ?>>Ditolak</option>
                         </select>
                     </div>
 
@@ -140,7 +147,7 @@ include 'includes/header.php';
                             name="admin_notes"
                             placeholder="Masukkan catatan admin"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                            rows="3"><?php echo htmlspecialchars($application['admin_notes'] ?? ''); ?></textarea>
+                            rows="3"><?php echo htmlspecialchars($application['catatan_admin'] ?? ''); ?></textarea>
                     </div>
                 </div>
             </div>
@@ -158,7 +165,7 @@ include 'includes/header.php';
                             id="fullName"
                             name="fullName"
                             placeholder="Masukkan nama lengkap"
-                            value="<?php echo htmlspecialchars($application['full_name']); ?>"
+                            value="<?php echo htmlspecialchars($application['nama_lengkap']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -184,7 +191,7 @@ include 'includes/header.php';
                             id="birthPlace"
                             name="birthPlace"
                             placeholder="Masukkan tempat lahir"
-                            value="<?php echo htmlspecialchars($application['birth_place']); ?>"
+                            value="<?php echo htmlspecialchars($application['tempat_lahir']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -196,7 +203,7 @@ include 'includes/header.php';
                             type="date"
                             id="birthDate"
                             name="birthDate"
-                            value="<?php echo htmlspecialchars($application['birth_date']); ?>"
+                            value="<?php echo htmlspecialchars($application['tanggal_lahir']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -210,8 +217,8 @@ include 'includes/header.php';
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                             <option value="">Pilih jenis kelamin</option>
-                            <option value="male" <?php echo ($application['gender'] == 'male') ? 'selected' : ''; ?>>Laki-laki</option>
-                            <option value="female" <?php echo ($application['gender'] == 'female') ? 'selected' : ''; ?>>Perempuan</option>
+                            <option value="male" <?php echo (mapGenderToEnglish($application['jenis_kelamin']) == 'male') ? 'selected' : ''; ?>>Laki-laki</option>
+                            <option value="female" <?php echo (mapGenderToEnglish($application['jenis_kelamin']) == 'female') ? 'selected' : ''; ?>>Perempuan</option>
                         </select>
                     </div>
                     <div class="space-y-2">
@@ -224,12 +231,12 @@ include 'includes/header.php';
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                             <option value="">Pilih agama</option>
-                            <option value="islam" <?php echo ($application['religion'] == 'islam') ? 'selected' : ''; ?>>Islam</option>
-                            <option value="kristen" <?php echo ($application['religion'] == 'kristen') ? 'selected' : ''; ?>>Kristen</option>
-                            <option value="katolik" <?php echo ($application['religion'] == 'katolik') ? 'selected' : ''; ?>>Katolik</option>
-                            <option value="hindu" <?php echo ($application['religion'] == 'hindu') ? 'selected' : ''; ?>>Hindu</option>
-                            <option value="buddha" <?php echo ($application['religion'] == 'buddha') ? 'selected' : ''; ?>>Buddha</option>
-                            <option value="konghucu" <?php echo ($application['religion'] == 'konghucu') ? 'selected' : ''; ?>>Konghucu</option>
+                            <option value="islam" <?php echo ($application['agama'] == 'islam') ? 'selected' : ''; ?>>Islam</option>
+                            <option value="kristen" <?php echo ($application['agama'] == 'kristen') ? 'selected' : ''; ?>>Kristen</option>
+                            <option value="katolik" <?php echo ($application['agama'] == 'katolik') ? 'selected' : ''; ?>>Katolik</option>
+                            <option value="hindu" <?php echo ($application['agama'] == 'hindu') ? 'selected' : ''; ?>>Hindu</option>
+                            <option value="buddha" <?php echo ($application['agama'] == 'buddha') ? 'selected' : ''; ?>>Buddha</option>
+                            <option value="konghucu" <?php echo ($application['agama'] == 'konghucu') ? 'selected' : ''; ?>>Konghucu</option>
                         </select>
                     </div>
                 </div>
@@ -249,7 +256,7 @@ include 'includes/header.php';
                             placeholder="Masukkan alamat lengkap"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             rows="3"
-                            required><?php echo htmlspecialchars($application['address']); ?></textarea>
+                            required><?php echo htmlspecialchars($application['alamat']); ?></textarea>
                     </div>
                     <div class="space-y-2">
                         <label for="phone" class="text-sm font-medium text-dark">
@@ -260,7 +267,7 @@ include 'includes/header.php';
                             id="phone"
                             name="phone"
                             placeholder="Masukkan nomor telepon"
-                            value="<?php echo htmlspecialchars($application['phone']); ?>"
+                            value="<?php echo htmlspecialchars($application['telepon']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -292,7 +299,7 @@ include 'includes/header.php';
                             id="fatherName"
                             name="fatherName"
                             placeholder="Masukkan nama ayah"
-                            value="<?php echo htmlspecialchars($application['father_name']); ?>"
+                            value="<?php echo htmlspecialchars($application['nama_ayah']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -305,7 +312,7 @@ include 'includes/header.php';
                             id="fatherJob"
                             name="fatherJob"
                             placeholder="Masukkan pekerjaan ayah"
-                            value="<?php echo htmlspecialchars($application['father_job']); ?>"
+                            value="<?php echo htmlspecialchars($application['pekerjaan_ayah']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -318,7 +325,7 @@ include 'includes/header.php';
                             id="motherName"
                             name="motherName"
                             placeholder="Masukkan nama ibu"
-                            value="<?php echo htmlspecialchars($application['mother_name']); ?>"
+                            value="<?php echo htmlspecialchars($application['nama_ibu']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -331,7 +338,7 @@ include 'includes/header.php';
                             id="motherJob"
                             name="motherJob"
                             placeholder="Masukkan pekerjaan ibu"
-                            value="<?php echo htmlspecialchars($application['mother_job']); ?>"
+                            value="<?php echo htmlspecialchars($application['pekerjaan_ibu']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -344,7 +351,7 @@ include 'includes/header.php';
                             id="parentPhone"
                             name="parentPhone"
                             placeholder="Masukkan nomor telepon orang tua"
-                            value="<?php echo htmlspecialchars($application['parent_phone']); ?>"
+                            value="<?php echo htmlspecialchars($application['telepon_orangtua']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -364,7 +371,7 @@ include 'includes/header.php';
                             id="schoolName"
                             name="schoolName"
                             placeholder="Masukkan nama sekolah asal"
-                            value="<?php echo htmlspecialchars($application['school_name']); ?>"
+                            value="<?php echo htmlspecialchars($application['nama_sekolah']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -377,7 +384,7 @@ include 'includes/header.php';
                             id="schoolAddress"
                             name="schoolAddress"
                             placeholder="Masukkan alamat sekolah asal"
-                            value="<?php echo htmlspecialchars($application['school_address']); ?>"
+                            value="<?php echo htmlspecialchars($application['alamat_sekolah']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -390,7 +397,7 @@ include 'includes/header.php';
                             id="graduationYear"
                             name="graduationYear"
                             placeholder="Masukkan tahun lulus"
-                            value="<?php echo htmlspecialchars($application['graduation_year']); ?>"
+                            value="<?php echo htmlspecialchars($application['tahun_lulus']); ?>"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             required>
                     </div>
@@ -423,10 +430,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['certificate_file'])): ?>
+                        <?php if (!empty($application['file_ijazah'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['certificate_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_ijazah']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -441,10 +448,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['birth_certificate_file'])): ?>
+                        <?php if (!empty($application['file_akta_kelahiran'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['birth_certificate_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_akta_kelahiran']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -459,10 +466,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['family_card_file'])): ?>
+                        <?php if (!empty($application['file_kartu_keluarga'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['family_card_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_kartu_keluarga']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -477,10 +484,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG)</p>
-                        <?php if (!empty($application['photo_file'])): ?>
+                        <?php if (!empty($application['file_foto'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['photo_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_foto']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -497,10 +504,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['elementary_certificate_file'])): ?>
+                        <?php if (!empty($application['file_ijazah_sd'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['elementary_certificate_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_ijazah_sd']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -515,10 +522,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['mda_certificate_file'])): ?>
+                        <?php if (!empty($application['file_ijazah_mda'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['mda_certificate_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_ijazah_mda']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -533,10 +540,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['skhun_file'])): ?>
+                        <?php if (!empty($application['file_skhun'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['skhun_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_skhun']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -551,10 +558,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['nisn_file'])): ?>
+                        <?php if (!empty($application['file_nisn'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['nisn_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_nisn']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -569,10 +576,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['parent_id_card_file'])): ?>
+                        <?php if (!empty($application['file_ktp_orangtua'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['parent_id_card_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_ktp_orangtua']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -587,10 +594,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['social_card_file'])): ?>
+                        <?php if (!empty($application['file_kartu_sosial'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['social_card_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_kartu_sosial']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -605,10 +612,10 @@ include 'includes/header.php';
                             accept=".jpg,.jpeg,.png,.pdf"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-darker focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                         <p class="text-xs text-gray-500">Maks. 2MB (JPG, PNG, PDF)</p>
-                        <?php if (!empty($application['graduation_letter_file'])): ?>
+                        <?php if (!empty($application['file_surat_lulus'])): ?>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-xs text-green-600">File saat ini:</span>
-                                <a href="../<?php echo htmlspecialchars($application['graduation_letter_file']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
+                                <a href="../<?php echo htmlspecialchars($application['file_surat_lulus']); ?>" target="_blank" class="text-xs text-primary hover:underline">Lihat File</a>
                             </div>
                         <?php endif; ?>
                     </div>

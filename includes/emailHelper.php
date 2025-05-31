@@ -115,27 +115,38 @@ function sendWithMailFunction($to, $subject, $message, $logFile) {
 * @return string Template email dalam format HTML
 */
 function getStatusUpdateEmailTemplate($name, $regNumber, $status, $notes = '') {
-    // Terjemahkan status ke Bahasa Indonesia
+    // PERBAIKAN: Update untuk menggunakan status dalam bahasa Indonesia
     $statusText = '';
     $statusColor = '';
-    switch ($status) {
+    
+    // Normalisasi status - handle both Indonesian and English values
+    $normalizedStatus = strtolower(trim($status));
+    
+    switch ($normalizedStatus) {
+        case 'menunggu':
         case 'pending':
             $statusText = 'Menunggu Verifikasi';
             $statusColor = '#f0ad4e'; // Warna kuning
             break;
+        case 'terverifikasi':
         case 'verified':
             $statusText = 'Terverifikasi';
             $statusColor = '#5bc0de'; // Warna biru
             break;
+        case 'diterima':
         case 'accepted':
             $statusText = 'Diterima';
             $statusColor = '#5cb85c'; // Warna hijau
             break;
+        case 'ditolak':
         case 'rejected':
             $statusText = 'Ditolak';
             $statusColor = '#d9534f'; // Warna merah
             break;
         default:
+            // Log untuk debugging
+            $logFile = __DIR__ . '/../logs/email.log';
+            file_put_contents($logFile, "Status tidak dikenali: '$status' (normalized: '$normalizedStatus')\n", FILE_APPEND);
             $statusText = 'Menunggu Verifikasi';
             $statusColor = '#f0ad4e';
     }
@@ -211,14 +222,17 @@ function getStatusUpdateEmailTemplate($name, $regNumber, $status, $notes = '') {
             </div>';
     }
     
-    // Tambahkan instruksi berdasarkan status
-    switch ($status) {
+    // Tambahkan instruksi berdasarkan status - Updated untuk status Indonesia
+    switch ($normalizedStatus) {
+        case 'terverifikasi':
         case 'verified':
             $template .= '<p>Pendaftaran Anda telah diverifikasi. Silakan menunggu pengumuman hasil seleksi.</p>';
             break;
+        case 'diterima':
         case 'accepted':
             $template .= '<p>Selamat! Anda telah diterima. Silakan melakukan daftar ulang sesuai jadwal yang telah ditentukan.</p>';
             break;
+        case 'ditolak':
         case 'rejected':
             $template .= '<p>Mohon maaf, pendaftaran Anda tidak dapat diterima. Silakan hubungi panitia PPDB untuk informasi lebih lanjut.</p>';
             break;
@@ -240,3 +254,91 @@ function getStatusUpdateEmailTemplate($name, $regNumber, $status, $notes = '') {
     return $template;
 }
 
+/**
+* Fungsi untuk mengirim email selamat datang kepada user baru
+*/
+function getWelcomeEmailTemplate($name, $username, $password, $regNumber) {
+    $template = '
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Selamat Datang di PPDB Online</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+            }
+            .container {
+                padding: 20px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+            .header {
+                background-color: #3d84e1;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px 5px 0 0;
+                margin-bottom: 20px;
+            }
+            .credentials {
+                background-color: #f9f9f9;
+                border: 1px solid #ddd;
+                padding: 15px;
+                border-radius: 5px;
+                margin: 20px 0;
+            }
+            .warning {
+                background-color: #fff3cd;
+                border: 1px solid #ffeaa7;
+                padding: 10px;
+                border-radius: 5px;
+                margin: 15px 0;
+                color: #856404;
+            }
+            .footer {
+                margin-top: 30px;
+                font-size: 12px;
+                color: #777;
+                border-top: 1px solid #ddd;
+                padding-top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>Selamat Datang di PPDB Online</h2>
+            </div>
+            
+            <p>Yth. <strong>' . htmlspecialchars($name) . '</strong>,</p>
+            
+            <p>Akun PPDB Online Anda telah berhasil dibuat dengan nomor pendaftaran <strong>' . htmlspecialchars($regNumber) . '</strong>.</p>
+            
+            <div class="credentials">
+                <h3>Informasi Login Anda:</h3>
+                <p><strong>Username:</strong> ' . htmlspecialchars($username) . '</p>
+                <p><strong>Password:</strong> ' . htmlspecialchars($password) . '</p>
+            </div>
+            
+            <div class="warning">
+                <p><strong>Penting:</strong> Silakan ganti password Anda setelah login pertama kali untuk keamanan akun.</p>
+            </div>
+            
+            <p>Anda dapat login ke sistem PPDB Online untuk melihat status pendaftaran dan melengkapi dokumen yang diperlukan.</p>
+            
+            <p>Jika Anda memiliki pertanyaan, silakan hubungi panitia PPDB.</p>
+            
+            <div class="footer">
+                <p>Email ini dikirim secara otomatis. Mohon tidak membalas email ini.</p>
+                <p>&copy; ' . date('Y') . ' PPDB Online. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>';
+    
+    return $template;
+}

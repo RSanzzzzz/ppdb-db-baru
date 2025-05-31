@@ -17,8 +17,8 @@ $applicationId = $_GET['id'];
 $newStatus = isset($_GET['status']) ? $_GET['status'] : (isset($_POST['status']) ? $_POST['status'] : '');
 $adminNotes = isset($_POST['admin_notes']) ? $_POST['admin_notes'] : '';
 
-// Validate status
-$validStatuses = ['pending', 'verified', 'accepted', 'rejected'];
+// Validate status - Updated for new schema
+$validStatuses = ['menunggu', 'terverifikasi', 'diterima', 'ditolak'];
 if (!in_array($newStatus, $validStatuses)) {
     header("Location: dashboard.php");
     exit();
@@ -27,8 +27,8 @@ if (!in_array($newStatus, $validStatuses)) {
 require_once '../config/database.php';
 require_once '../includes/emailHelper.php';
 
-// Get current application data to check if status or notes have changed
-$currentDataStmt = $pdo->prepare("SELECT a.*, u.email, u.name as user_name FROM applicants a 
+// Get current application data to check if status or notes have changed - Updated for new schema
+$currentDataStmt = $pdo->prepare("SELECT a.*, u.email, u.nama as user_name FROM applicants a 
                                  JOIN users u ON a.user_id = u.id 
                                  WHERE a.id = ?");
 $currentDataStmt->execute([$applicationId]);
@@ -40,22 +40,39 @@ if (!$currentData) {
 }
 
 $statusChanged = $currentData['status'] !== $newStatus;
-$notesChanged = $adminNotes !== $currentData['admin_notes'];
+$notesChanged = $adminNotes !== $currentData['catatan_admin'];
 
-// Update status and admin notes in database
-$updateStmt = $pdo->prepare("UPDATE applicants SET status = ?, admin_notes = ? WHERE id = ?");
+// Update status and admin notes in database - Updated for new schema
+$updateStmt = $pdo->prepare("UPDATE applicants SET status = ?, catatan_admin = ? WHERE id = ?");
 $result = $updateStmt->execute([$newStatus, $adminNotes, $applicationId]);
 
 // Send email notification if status or notes changed
 if ($result && ($statusChanged || $notesChanged)) {
-    // Get user email and name
+    // Get user email and name - Updated for new schema
     $userEmail = $currentData['email'];
-    $userName = $currentData['full_name'] ?? $currentData['user_name'];
-    $regNumber = $currentData['registration_number'];
+    $userName = $currentData['nama_lengkap'] ?? $currentData['user_name'];
+    $regNumber = $currentData['nomor_pendaftaran'];
+    
+    // Map status to display text for email
+    $statusDisplayText = '';
+    switch ($newStatus) {
+        case 'menunggu':
+            $statusDisplayText = 'Menunggu Verifikasi';
+            break;
+        case 'terverifikasi':
+            $statusDisplayText = 'Terverifikasi';
+            break;
+        case 'diterima':
+            $statusDisplayText = 'Diterima';
+            break;
+        case 'ditolak':
+            $statusDisplayText = 'Ditolak';
+            break;
+    }
     
     // Create email content
     $subject = "Update Status Pendaftaran PPDB - " . $regNumber;
-    $emailContent = getStatusUpdateEmailTemplate($userName, $regNumber, $newStatus, $adminNotes);
+    $emailContent = getStatusUpdateEmailTemplate($userName, $regNumber, $statusDisplayText, $adminNotes);
     
     // Send email
     $emailSent = sendEmail($userEmail, $subject, $emailContent);
@@ -72,7 +89,7 @@ if ($result && ($statusChanged || $notesChanged)) {
     
     $logMessage = date('Y-m-d H:i:s') . " - Email ke $userEmail: " . 
                  ($emailSent ? "BERHASIL" : "GAGAL") . 
-                 ", Status: $newStatus, ID: $applicationId\n";
+                 ", Status: $statusDisplayText, ID: $applicationId\n";
     file_put_contents($logFile, $logMessage, FILE_APPEND);
 }
 

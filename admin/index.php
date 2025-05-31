@@ -20,23 +20,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (empty($username) || empty($password)) {
       $error = 'Username dan password harus diisi';
   } else {
-      // Check admin credentials
-      $stmt = $pdo->prepare("SELECT * FROM admins WHERE username = ?");
+      // Check admin credentials - Updated for new schema
+      $stmt = $pdo->prepare("SELECT * FROM admin WHERE nama_pengguna = ?");
       $stmt->execute([$username]);
       $admin = $stmt->fetch();
-        
-        if (password_verify($password, $admin['password'])) {
-            // Login successful
-            $_SESSION['admin_id'] = $admin['id'];
-            $_SESSION['admin_username'] = $admin['username'];
-            $_SESSION['admin_name'] = $admin['name'];
-            
-            // Redirect to dashboard
-            header("Location: dashboard.php");
-            exit();
-        } else {
-            $error = 'Username atau password salah';
-        }
+      
+      if ($admin && password_verify($password, $admin['kata_sandi'])) {
+          // Login successful
+          $_SESSION['admin_id'] = $admin['id'];
+          $_SESSION['admin_username'] = $admin['nama_pengguna'];
+          $_SESSION['admin_name'] = $admin['nama'];
+          
+          // Redirect to dashboard
+          header("Location: dashboard.php");
+          exit();
+      } else {
+          $error = 'Username atau password salah';
+      }
   }
 }
 ?>
@@ -141,11 +141,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               Login
           </button>
           
-          <!-- <div class="text-center text-sm">
+          <div class="text-center text-sm">
               <a href="../index.php" class="text-primary hover:text-primary-hover hover:underline hover-transition">Kembali ke Halaman Utama</a>
-          </div> -->
+          </div>
       </form>
   </div>
 </body>
 </html>
-

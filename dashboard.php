@@ -27,15 +27,16 @@ $adminNotes = '';
 
 if (isset($_SESSION['user_id'])) {
     require_once 'config/database.php';
-    $stmt = $pdo->prepare("SELECT * FROM applicants WHERE user_id = ? ORDER BY created_at DESC LIMIT 1");
+    $stmt = $pdo->prepare("SELECT * FROM applicants WHERE user_id = ? ORDER BY tanggal_dibuat DESC LIMIT 1");
     $stmt->execute([$_SESSION['user_id']]);
     $application = $stmt->fetch();
 
     if ($application) {
         $hasApplied = true;
+        // Map database status values to display values
         $applicationStatus = $application['status'];
-        $registrationNumber = $application['registration_number'];
-        $adminNotes = $application['admin_notes'];
+        $registrationNumber = $application['nomor_pendaftaran'];
+        $adminNotes = $application['catatan_admin'];
 
         // If user has already applied, show the completion tab
         if ($activeTab === 'form') {
@@ -146,15 +147,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form']) && !$h
         if ($_FILES['socialCard']['name']) move_uploaded_file($_FILES['socialCard']['tmp_name'], $socialCardFile);
         if ($_FILES['graduationLetter']['name']) move_uploaded_file($_FILES['graduationLetter']['tmp_name'], $graduationLetterFile);
 
+        // Convert gender value to match database enum ('laki-laki', 'perempuan')
+        $genderValue = ($_POST['gender'] === 'male') ? 'laki-laki' : 'perempuan';
+
         // Insert data into database
         $stmt = $pdo->prepare("INSERT INTO applicants (
-      user_id, registration_number, full_name, nisn, birth_place, birth_date, 
-      gender, religion, address, phone, email, father_name, father_job, 
-      mother_name, mother_job, parent_phone, school_name, school_address, 
-      graduation_year, certificate_file, birth_certificate_file, family_card_file, photo_file,
-      elementary_certificate_file, mda_certificate_file, skhun_file, nisn_file,
-      parent_id_card_file, social_card_file, graduation_letter_file
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            user_id, nomor_pendaftaran, nama_lengkap, nisn, tempat_lahir, tanggal_lahir, 
+            jenis_kelamin, agama, alamat, telepon, email, nama_ayah, pekerjaan_ayah, 
+            nama_ibu, pekerjaan_ibu, telepon_orangtua, nama_sekolah, alamat_sekolah, 
+            tahun_lulus, file_ijazah, file_akta_kelahiran, file_kartu_keluarga, file_foto,
+            file_ijazah_sd, file_ijazah_mda, file_skhun, file_nisn,
+            file_ktp_orangtua, file_kartu_sosial, file_surat_lulus, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $result = $stmt->execute([
             $_SESSION['user_id'],
@@ -163,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form']) && !$h
             $_POST['nisn'],
             $_POST['birthPlace'],
             $_POST['birthDate'],
-            $_POST['gender'],
+            $genderValue, // Updated to use the converted gender value
             $_POST['religion'],
             $_POST['address'],
             $_POST['phone'],
@@ -186,12 +190,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form']) && !$h
             $nisnFile,
             $parentIdCardFile,
             $socialCardFile,
-            $graduationLetterFile
+            $graduationLetterFile,
+            'menunggu' // Default status is 'menunggu' (pending)
         ]);
 
         if ($result) {
             // Save registration number in session for display
-            $_SESSION['registration_number'] = $registrationNumber;
+            $_SESSION['nomor_pendaftaran'] = $registrationNumber;
             $formSubmitted = true;
 
             // Use PRG pattern to prevent form resubmission
@@ -207,7 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form']) && !$h
 $userEmail = '';
 if (isset($_SESSION['user_id'])) {
     require_once 'config/database.php';
-    $stmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT email FROM users WHERE id = ?"); // Changed from 'users' to match new schema
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
     if ($user) {
@@ -225,15 +230,47 @@ if (isset($_GET['logout'])) {
 // After form submission, refresh application data
 if (isset($_GET['submitted']) && $_GET['submitted'] == '1') {
     require_once 'config/database.php';
-    $stmt = $pdo->prepare("SELECT * FROM applicants WHERE user_id = ? ORDER BY created_at DESC LIMIT 1");
+    $stmt = $pdo->prepare("SELECT * FROM applicants WHERE user_id = ? ORDER BY tanggal_dibuat DESC LIMIT 1");
     $stmt->execute([$_SESSION['user_id']]);
     $application = $stmt->fetch();
 
     if ($application) {
         $hasApplied = true;
         $applicationStatus = $application['status'];
-        $registrationNumber = $application['registration_number'];
-        $adminNotes = $application['admin_notes'];
+        $registrationNumber = $application['nomor_pendaftaran'];
+        $adminNotes = $application['catatan_admin'];
+    }
+}
+
+// Function to map database status to display status
+function mapStatusToDisplay($dbStatus) {
+    switch ($dbStatus) {
+        case 'menunggu':
+            return 'Menunggu Verifikasi';
+        case 'terverifikasi':
+            return 'Terverifikasi';
+        case 'diterima':
+            return 'Diterima';
+        case 'ditolak':
+            return 'Ditolak';
+        default:
+            return 'Menunggu Verifikasi';
+    }
+}
+
+// Function to map database status to CSS class
+function mapStatusToClass($dbStatus) {
+    switch ($dbStatus) {
+        case 'menunggu':
+            return 'status-pending';
+        case 'terverifikasi':
+            return 'status-verified';
+        case 'diterima':
+            return 'status-accepted';
+        case 'ditolak':
+            return 'status-rejected';
+        default:
+            return 'status-pending';
     }
 }
 ?>
@@ -429,20 +466,6 @@ if (isset($_GET['submitted']) && $_GET['submitted'] == '1') {
                         <li>Surat Keterangan Lulus</li>
                     </ul>
                 </div>
-
-                <!-- <div class="mb-6">
-                    <h4 class="mb-2 text-lg font-medium text-dark">Jalur Pendaftaran</h4>
-                    <div class="space-y-2">
-                        <p class="text-dark"><strong>1. Jalur Prestasi Akademik</strong></p>
-                        <p class="text-sm text-muted-foreground">Untuk siswa dengan nilai rapor yang memenuhi syarat minimum</p>
-
-                        <p class="text-dark"><strong>2. Jalur Prestasi Non-Akademik</strong></p>
-                        <p class="text-sm text-muted-foreground">Untuk siswa dengan prestasi di bidang olahraga, seni, atau kompetisi lainnya</p>
-
-                        <p class="text-dark"><strong>3. Jalur Reguler</strong></p>
-                        <p class="text-sm text-muted-foreground">Untuk pendaftaran umum berdasarkan hasil tes masuk</p>
-                    </div>
-                </div> -->
 
                 <div class="pt-4">
                     <a href="?tab=form" class="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover active:bg-primary-active hover-transition shadow-sm <?php echo $hasApplied ? 'opacity-50 pointer-events-none' : ''; ?>">
@@ -881,43 +904,22 @@ if (isset($_GET['submitted']) && $_GET['submitted'] == '1') {
                     // Get application details if not already fetched
                     if (!isset($application) && isset($_SESSION['user_id'])) {
                         require_once 'config/database.php';
-                        $stmt = $pdo->prepare("SELECT * FROM applicants WHERE user_id = ? ORDER BY created_at DESC LIMIT 1");
+                        $stmt = $pdo->prepare("SELECT * FROM applicants WHERE user_id = ? ORDER BY tanggal_dibuat DESC LIMIT 1");
                         $stmt->execute([$_SESSION['user_id']]);
                         $application = $stmt->fetch();
 
                         if ($application) {
                             $applicationStatus = $application['status'];
-                            $registrationNumber = $application['registration_number'];
-                            $adminNotes = $application['admin_notes']; // Make sure to get admin notes
+                            $registrationNumber = $application['nomor_pendaftaran'];
+                            $adminNotes = $application['catatan_admin']; // Make sure to get admin notes
                         } else {
-                            $registrationNumber = $_SESSION['registration_number'] ?? 'PPDB' . date('Y') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
+                            $registrationNumber = $_SESSION['nomor_pendaftaran'] ?? 'PPDB' . date('Y') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
                         }
                     }
 
-                    // Status text and class
-                    $statusText = '';
-                    $statusClass = '';
-                    switch ($applicationStatus) {
-                        case 'pending':
-                            $statusText = 'Menunggu Verifikasi';
-                            $statusClass = 'status-pending';
-                            break;
-                        case 'verified':
-                            $statusText = 'Terverifikasi';
-                            $statusClass = 'status-verified';
-                            break;
-                        case 'accepted':
-                            $statusText = 'Diterima';
-                            $statusClass = 'status-accepted';
-                            break;
-                        case 'rejected':
-                            $statusText = 'Ditolak';
-                            $statusClass = 'status-rejected';
-                            break;
-                        default:
-                            $statusText = 'Menunggu Verifikasi';
-                            $statusClass = 'status-pending';
-                    }
+                    // Map status to display text and class
+                    $statusText = mapStatusToDisplay($applicationStatus);
+                    $statusClass = mapStatusToClass($applicationStatus);
                     ?>
                     <div class="space-y-4 text-center">
                         <div class="mx-auto my-6 flex h-20 w-20 items-center justify-center rounded-full bg-light">
@@ -940,7 +942,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] == '1') {
                             </div>
                             <div class="mb-2 grid grid-cols-2 gap-2">
                                 <span class="text-sm font-medium text-dark">Tanggal Daftar:</span>
-                                <span class="text-sm text-darker"><?php echo isset($application) ? date('d F Y', strtotime($application['created_at'])) : date('d F Y'); ?></span>
+                                <span class="text-sm text-darker"><?php echo isset($application) ? date('d F Y', strtotime($application['tanggal_dibuat'])) : date('d F Y'); ?></span>
                             </div>
                             <div class="mb-2 grid grid-cols-2 gap-2">
                                 <span class="text-sm font-medium text-dark">Status:</span>
